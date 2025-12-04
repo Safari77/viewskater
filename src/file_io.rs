@@ -24,7 +24,12 @@ use iced_wgpu::engine::CompressionStrategy;
 
 const ALLOWED_EXTENSIONS: [&str; 15] = ["jpg", "jpeg", "png", "gif", "bmp", "ico", "tiff", "tif",
         "webp", "pnm", "pbm", "pgm", "ppm", "qoi", "tga"];
+
+#[cfg(feature = "archives")]
 pub const ALLOWED_COMPRESSED_FILES: [&str; 3] = ["zip", "rar", "7z"];
+
+#[cfg(not(feature = "archives"))]
+pub const ALLOWED_COMPRESSED_FILES: [&str; 0] = [];
 
 pub fn supported_image(name: &str) -> bool {
     // Filter out macOS metadata files
@@ -130,16 +135,27 @@ pub fn read_image_bytes(path_source: &crate::cache::img_cache::PathSource, archi
         },
 
         PathSource::Archive(path) => {
-            // Direct archive reading - no filesystem checks
-            let cache = archive_cache.ok_or_else(|| io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Archive cache required for archive content"
-            ))?;
+            #[cfg(feature = "archives")]
+            {
+                // Direct archive reading - no filesystem checks
+                let cache = archive_cache.ok_or_else(|| io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Archive cache required for archive content"
+                ))?;
 
-            let path_str = path.to_string_lossy();
-            debug!("Reading from archive: {}", path_str);
-            cache.read_from_archive(&path_str)
-                .map_err(|e| io::Error::other(format!("Failed to read from archive: {}", e)))
+                let path_str = path.to_string_lossy();
+                debug!("Reading from archive: {}", path_str);
+                cache.read_from_archive(&path_str)
+                    .map_err(|e| io::Error::other(format!("Failed to read from archive: {}", e)))
+            }
+
+            #[cfg(not(feature = "archives"))]
+            {
+                Err(io::Error::new(
+                    io::ErrorKind::Unsupported, 
+                    "Archive support is disabled in this build"
+                ))
+            }
         }
     }
 }

@@ -31,9 +31,6 @@ rayon = "1.8"
 texpresso = { version = "2.0.1", features = ["rayon"] }
 sysinfo = "0.33.1"
 libc = "0.2"
-zip = "4"
-unrar = "0.5"
-sevenz-rust2 = "0.18"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
@@ -64,7 +61,14 @@ iced_aw = { package = "iced_aw", git = "https://github.com/ggand0/iced_aw.git", 
 #iced_futures = { path = "../iced/futures", features = ["tokio"] }
 #iced_aw = { path = "../iced_aw", features = ["menu", "quad"] }
 
+# archives
+zip = { version = "4", optional = true }
+unrar = { version = "0.5", optional = true }
+sevenz-rust2 = { version = "0.18", optional = true }
+
 [features]
+default = ["archives"]
+archives = ["dep:zip", "dep:unrar", "dep:sevenz-rust2" ]
 # Image selection/curation features for dataset preparation (disabled by default)
 selection = []
 # COCO dataset visualization (disabled by default)

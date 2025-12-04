@@ -6,7 +6,14 @@ use std::collections::HashMap;
 #[allow(unused_imports)]
 use log::{debug, error, warn};
 
-#[derive(Debug, Clone)]
+#[cfg(feature = "archives")]
+use zip;
+#[cfg(feature = "archives")]
+use unrar;
+#[cfg(feature = "archives")]
+use sevenz_rust2;
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ArchiveType {
     Zip,
     Rar,
@@ -19,9 +26,11 @@ pub struct ArchiveCache {
     current_archive: Option<(PathBuf, ArchiveType)>,
     
     /// Cached ZIP archive instance to avoid reopening the file
+    #[cfg(feature = "archives")]
     zip_archive: Option<Arc<std::sync::Mutex<zip::ZipArchive<std::io::BufReader<std::fs::File>>>>>,
     
     /// Cached 7z archive instance 
+    #[cfg(feature = "archives")]
     sevenz_archive: Option<Arc<std::sync::Mutex<sevenz_rust2::ArchiveReader<std::fs::File>>>>,
     
     /// Preloaded file data for small solid archives (filename -> bytes)
@@ -32,7 +41,9 @@ impl ArchiveCache {
     pub fn new() -> Self {
         Self {
             current_archive: None,
+            #[cfg(feature = "archives")]
             zip_archive: None,
+            #[cfg(feature = "archives")]
             sevenz_archive: None,
             preloaded_data: HashMap::new(),
         }
@@ -54,8 +65,11 @@ impl ArchiveCache {
     
     /// Clear all cached archive instances
     pub fn clear_cache(&mut self) {
-        self.zip_archive = None;
-        self.sevenz_archive = None;
+        #[cfg(feature = "archives")]
+        {
+            self.zip_archive = None;
+            self.sevenz_archive = None;
+        }
         self.preloaded_data.clear();
         debug!("Archive cache cleared");
     }
@@ -77,6 +91,7 @@ impl ArchiveCache {
 
     /// Read a file from the current compressed archive
     /// This is the main entry point for archive-only operations
+    #[cfg(feature = "archives")]
     pub fn read_from_archive(&mut self, filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let (path, archive_type) = match self.current_archive.as_ref() {
             Some((p, t)) => (p.clone(), t.clone()),
@@ -91,6 +106,7 @@ impl ArchiveCache {
     }
     
     /// Read a file from ZIP archive using cached ZipArchive instance
+    #[cfg(feature = "archives")]
     fn read_zip_file(&mut self, path: &PathBuf, filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         // Get or create cached ZIP archive
         if self.zip_archive.is_none() {
@@ -111,6 +127,7 @@ impl ArchiveCache {
     
     /// Read a file from RAR archive using simple filename comparison
     /// Uses the contributor's straightforward approach - simple and intuitive
+    #[cfg(feature = "archives")]
     fn read_rar_file(&mut self, path: &PathBuf, filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let mut archive = unrar::Archive::new(path).open_for_processing()?;
         let buffer = Vec::new();
@@ -135,6 +152,7 @@ impl ArchiveCache {
     }
 
     /// Read a file from 7z archive using cached ArchiveReader instance
+    #[cfg(feature = "archives")]
     fn read_7z_file(&mut self, path: &PathBuf, filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         // Get or create cached 7z archive
         if self.sevenz_archive.is_none() {

@@ -442,6 +442,8 @@ impl Pane {
 
         // compressed file
         if path.extension().is_some_and(|ex| ALLOWED_COMPRESSED_FILES.contains(&ex.to_ascii_lowercase().to_str().unwrap_or(""))) {
+            #[cfg(feature = "archives")]
+            {
             let archive;
             match path.extension().unwrap().to_ascii_lowercase().to_str() {
                 Some("zip") => {
@@ -496,6 +498,7 @@ impl Pane {
             ));
             self.has_compressed_file = true;
             self.archive_cache.lock().unwrap().set_current_archive(path.to_path_buf(), archive);
+            }
         } else {
             // Get directory path and image files
             let (dir_path, paths_result) = if is_file(path) {
@@ -778,6 +781,7 @@ pub fn get_master_slider_value(panes: &[&mut Pane],
     pane.img_cache.current_index
 }
 
+#[cfg(feature = "archives")]
 fn read_zip_path(path: &PathBuf, file_paths: &mut Vec<PathSource>, archive_cache: &mut ArchiveCache, archive_cache_size: u64) -> Result<(), Box<dyn Error>> {
     use std::io::Read;
     let mut files = Vec::new();
@@ -820,6 +824,7 @@ fn read_zip_path(path: &PathBuf, file_paths: &mut Vec<PathSource>, archive_cache
     Ok(())
 }
 
+#[cfg(feature = "archives")]
 fn read_rar_path(path: &PathBuf, file_paths: &mut Vec<PathSource>, archive_cache: &mut ArchiveCache, archive_cache_size: u64) -> Result<(), Box<dyn Error>> {
     let archive = unrar::Archive::new(path)
         .open_for_listing()?;
@@ -871,6 +876,7 @@ fn read_rar_path(path: &PathBuf, file_paths: &mut Vec<PathSource>, archive_cache
     Ok(())
 }
 
+#[cfg(feature = "archives")]
 fn read_7z_path(path: &PathBuf, file_paths: &mut Vec<PathSource>, archive_cache: &mut ArchiveCache, archive_cache_size: u64, archive_warning_threshold_mb: u64) -> Result<(), Box<dyn Error>> {
     use std::thread;
     use std::io::Read;
